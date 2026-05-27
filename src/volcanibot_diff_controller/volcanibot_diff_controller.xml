@@ -1,0 +1,9 @@
+<library path="volcanibot_diff_controller">
+  <class name="volcanibot_diff_controller/DiffDriveSystemHardware"
+         type="volcanibot_diff_controller::DiffDriveSystemHardware"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      It uses velocity command and position state interface to produce odom and tf for differiential robot
+    </description>
+  </class>
+</library>

@@ -1,0 +1,21 @@
+twist_mux:
+  ros__parameters:
+    use_stamped: false
+    topics:
+      joystick:
+        topic: joy_vel
+        timeout: 0.5
+        priority: 99
+      navigation:
+         topic: /nav_vel
+         timeout: 0.5
+         priority: 50
+      
+      # virtual_joystick:
+      #   topic: /virtual_joy_vel
+      #   timeout: 0.5
+      #   priority: 50
+      # line_follower:
+      #   topic: /line_follower/cmd_vel
+      #   timeout: 0.5
+      #   priority: 50

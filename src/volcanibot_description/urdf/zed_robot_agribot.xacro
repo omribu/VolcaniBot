@@ -1,0 +1,347 @@
+<?xml version="1.0"?>
+<robot name="agribot" xmlns:xacro="http://ros.org/wiki/xacro">
+
+
+  <!-- ARGUMENTS-->
+  <xacro:arg name="camera_name"          default="zed" />
+  <xacro:arg name="camera_model"         default="zedx" />
+  <xacro:arg name="use_zed_localization" default="false" />
+  <xacro:arg name="baseline"             default="0.0" />
+  <xacro:arg name="use_sim"              default="true" />
+
+  <!-- MATERIALS-->
+  <material name="brown"><color rgba="0.396078431372549 0.21568627450980393 0.0 1.0"/></material>
+  <material name="red"><color rgba="0.8 0.0 0.0 1.0"/></material>
+  <material name="black"><color rgba="0 0 0 1"/></material>
+  <material name="light_black"><color rgba="0.1 0.1 0.1 1"/></material>
+  <material name="aluminum"><color rgba="0.8 0.8 0.8 1.0"/></material>
+  <material name="grey"><color rgba="0.5 0.5 0.5 1"/></material>
+  <material name="white"><color rgba="0.95 0.95 0.95 1"/></material>
+  <material name="blue"><color rgba="0.0 0.5 1.0 1"/></material>
+  <material name="zed2_mat"><color rgba="0.25 0.25 0.25 0.99"/></material>
+
+
+  <!-- BASE LINKS-->
+  <link name="base_footprint"/>
+
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0.000824745609091071 0.000308432013766069 -0.348795097773962" rpy="0 0 0"/>
+      <mass value="98.2206347258376"/>
+      <inertia ixx="8.04861649065602" ixy="-0.000243505296496384" ixz="-1.23536316318022E-12"
+               iyy="8.02628327825716" iyz="-2.67210376330799E-13"
+               izz="14.6198876609904"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://volcanibot_description/meshes/base_link.STL"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://volcanibot_description/meshes/base_link.STL"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="base_footprint_to_base_link" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.9" rpy="0 0 0"/>
+  </joint>
+
+  <!-- WHEELS-->
+  <!-- REAR RIGHT -->
+  <link name="rear_right_wheel_link">
+    <inertial>
+      <origin xyz="7.66942065411058E-12 0.00246396479612621 -1.02851061001275E-12" rpy="0 0 0"/>
+      <mass value="19.5682646733117"/>
+      <inertia ixx="0.41545797245674" ixy="1.5364211917504E-12" ixz="-7.82486812116746E-13"
+               iyy="0.768576636338704" iyz="-4.25891260535319E-13"
+               izz="0.415457972457063"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://volcanibot_description/meshes/rear_right_wheel_link.STL"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><sphere radius="0.26"/></geometry>
+    </collision>
+  </link>
+  <joint name="rear_right_wheel_joint" type="continuous">
+    <origin xyz="-0.5 -0.9705 -0.66" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="rear_right_wheel_link"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- REAR LEFT -->
+  <link name="rear_left_wheel_link">
+    <inertial>
+      <origin xyz="-4.86310991476557E-12 -0.00246396479612798 6.07225381088483E-12" rpy="0 0 0"/>
+      <mass value="19.568264673306"/>
+      <inertia ixx="0.415457972457667" ixy="1.15340457833747E-12" ixz="-2.28669379319239E-13"
+               iyy="0.768576636338705" iyz="-1.1012630858852E-12"
+               izz="0.415457972456137"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://volcanibot_description/meshes/rear_left_wheel_link.STL"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><sphere radius="0.26"/></geometry>
+    </collision>
+  </link>
+  <joint name="rear_left_wheel_joint" type="continuous">
+    <origin xyz="-0.5 0.9705 -0.66" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="rear_left_wheel_link"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- FRONT LEFT -->
+  <link name="front_left_wheel_link">
+    <inertial>
+      <origin xyz="3.00337532621597E-12 -0.00246396479612554 7.17892412183119E-12" rpy="0 0 0"/>
+      <mass value="19.5682646733116"/>
+      <inertia ixx="0.415457972456292" ixy="-4.16150298831959E-13" ixz="-5.16513213527462E-13"
+               iyy="0.768576636338703" iyz="-1.53906128365951E-12"
+               izz="0.415457972457511"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://volcanibot_description/meshes/front_left_wheel_link.STL"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><sphere radius="0.26"/></geometry>
+    </collision>
+  </link>
+  <joint name="front_left_wheel_joint" type="continuous">
+    <origin xyz="0.5 0.9705 -0.66" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="front_left_wheel_link"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- FRONT RIGHT -->
+  <link name="front_right_wheel_link">
+    <inertial>
+      <origin xyz="7.52264917025514E-12 0.00246396479612709 1.99529281985633E-12" rpy="0 0 0"/>
+      <mass value="19.5682646733087"/>
+      <inertia ixx="0.415457972457348" ixy="1.58185015757493E-12" ixz="-6.62619227143719E-13"
+               iyy="0.768576636338703" iyz="2.0216381958391E-13"
+               izz="0.415457972456455"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://volcanibot_description/meshes/front_right_wheel_link.STL"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><sphere radius="0.26"/></geometry>
+    </collision>
+  </link>
+  <joint name="front_right_wheel_joint" type="continuous">
+    <origin xyz="0.5 -0.9705 -0.66" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="front_right_wheel_link"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+
+  <!-- ZED CAMERA-->
+  <!-- <link name="$(arg camera_name)_camera_link"/>
+
+  <link name="$(arg camera_name)_camera_center">
+    <visual>
+      <origin rpy="0 0 0" xyz="0.0 0 -0.016"/>
+      <geometry>
+        <mesh filename="package://volcanibot_description/meshes/zedx.stl"/>
+      </geometry>
+      <material name="zed2_mat"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.0 0 -0.016"/>
+      <geometry>
+        <mesh filename="package://volcanibot_description/meshes/zedx.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="$(arg camera_name)_camera_center_joint" type="fixed">
+    <parent link="$(arg camera_name)_camera_link"/>
+    <child link="$(arg camera_name)_camera_center"/>
+    <origin rpy="0 0 0" xyz="0 0 0.016"/>
+  </joint> -->
+<!-- 
+  <link name="$(arg camera_name)_left_camera_frame"/>
+  <joint name="$(arg camera_name)_left_camera_joint" type="fixed">
+    <parent link="$(arg camera_name)_camera_center"/>
+    <child link="$(arg camera_name)_left_camera_frame"/>
+    <origin rpy="0 0 0" xyz="-0.01 0.06 0"/>
+  </joint>
+  <link name="$(arg camera_name)_left_camera_frame_optical"/>
+  <joint name="$(arg camera_name)_left_camera_optical_joint" type="fixed">
+    <origin rpy="-1.5707963267948966 0.0 -1.5707963267948966" xyz="0 0 0"/>
+    <parent link="$(arg camera_name)_left_camera_frame"/>
+    <child link="$(arg camera_name)_left_camera_frame_optical"/>
+  </joint>
+
+  <link name="$(arg camera_name)_right_camera_frame"/>
+  <joint name="$(arg camera_name)_right_camera_joint" type="fixed">
+    <parent link="$(arg camera_name)_camera_center"/>
+    <child link="$(arg camera_name)_right_camera_frame"/>
+    <origin rpy="0 0 0" xyz="-0.01 -0.06 0"/>
+  </joint>
+  <link name="$(arg camera_name)_right_camera_frame_optical"/>
+  <joint name="$(arg camera_name)_right_camera_optical_joint" type="fixed">
+    <origin rpy="-1.5707963267948966 0.0 -1.5707963267948966" xyz="0 0 0"/>
+    <parent link="$(arg camera_name)_right_camera_frame"/>
+    <child link="$(arg camera_name)_right_camera_frame_optical"/>
+  </joint>
+
+  <xacro:if value="$(arg use_zed_localization)">
+    <joint name="$(arg camera_name)_joint" type="fixed">
+      <parent link="$(arg camera_name)_camera_link"/>
+      <child link="base_link"/>
+      <origin xyz="0.68 0.0 -0.16" rpy="0 0 0"/>
+    </joint>
+  </xacro:if>
+  <xacro:unless value="$(arg use_zed_localization)">
+    <joint name="$(arg camera_name)_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="$(arg camera_name)_camera_link"/>
+      <origin xyz="0.68 0.0 -0.16" rpy="0 0 0"/>
+    </joint>
+  </xacro:unless> -->
+
+
+  <!-- LEFT REALSENSE CAMERA -->
+  <!-- <link name="camera_left_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://volcanibot_description/meshes/d435.dae"/>
+      </geometry>
+      <material name="aluminum"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.025 0.090 0.025"/></geometry>
+    </collision>
+  </link>
+  <joint name="camera_left_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_left_link"/>
+    <origin xyz="0.58 1.1 -0.135" rpy="0 0.75 0.45"/>
+  </joint> -->
+
+  <!-- RIGHT REALSENSE CAMERA -->
+  <!-- <link name="camera_right_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://volcanibot_description/meshes/d435.dae"/>
+      </geometry>
+      <material name="aluminum"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.025 0.090 0.025"/></geometry>
+    </collision>
+  </link>
+  <joint name="camera_right_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_right_link"/>
+    <origin xyz="0.58 -1.1 -0.135" rpy="0 0.75 -0.45"/>
+  </joint> -->
+
+  <!-- REAR REALSENSE CAMERA -->
+  <link name="rear_camera_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://volcanibot_description/meshes/d435.dae"/>
+      </geometry>
+      <material name="aluminum"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.025 0.090 0.025"/></geometry>
+    </collision>
+  </link>
+  <joint name="rear_camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="rear_camera_link"/>
+    <origin xyz="-0.686 0.0 -0.15" rpy="0 0 3.14159"/>
+  </joint>
+
+
+  <!-- ROS2_CONTROL — Isaac Sim-->
+  <xacro:if value="$(arg use_sim)">
+    <ros2_control name="IsaacSimDriveSystem" type="system">
+      <hardware>
+        <plugin>topic_based_ros2_control/TopicBasedSystem</plugin>
+        <param name="joint_states_topic">/joint_states</param>
+        <param name="joint_commands_topic">/drive_command</param>
+      </hardware>
+      <joint name="front_left_wheel_joint">
+        <command_interface name="velocity">
+          <param name="min">-1</param>
+          <param name="max">1</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+      <joint name="front_right_wheel_joint">
+        <command_interface name="velocity">
+          <param name="min">-1</param>
+          <param name="max">1</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+      <joint name="rear_left_wheel_joint">
+        <command_interface name="velocity">
+          <param name="min">-1</param>
+          <param name="max">1</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+      <joint name="rear_right_wheel_joint">
+        <command_interface name="velocity">
+          <param name="min">-1</param>
+          <param name="max">1</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+    </ros2_control>
+  </xacro:if>
+
+  <!-- ROS2_CONTROL — Real Hardware -->
+  <xacro:unless value="$(arg use_sim)">
+    <xacro:include filename="$(find volcanibot_diff_controller)/description/ros2_control/diffbot.ros2_control.xacro"/>
+    <xacro:volcanibot_diff_controller name="AgribotDriveSystem" prefix=""/>
+  </xacro:unless>
+
+</robot>
