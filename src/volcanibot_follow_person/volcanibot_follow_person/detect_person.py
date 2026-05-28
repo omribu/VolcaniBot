@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from ultralytics import YOLO
@@ -16,26 +17,23 @@ class DetectPersonNode(Node):
         super().__init__('detect_person_node')
 
         # Parameters
-        self.declare_parameter('camera_topic',          '/arducam/image_raw')
-        self.declare_parameter('mask_topic',            '/yolo/person_mask')
-        self.declare_parameter('model_path',            'yolov8n.pt')
-        self.declare_parameter('confidence_threshold',  0.5)
-        self.declare_parameter('max_fps',               5.0)
-        self.declare_parameter('device',                '')
-        self.declare_parameter('display',               True)
+        self.declare_parameter('camera_topic', '/camera/realsense_rear/color/image_raw')
+        self.declare_parameter('mask_topic', '/realsense_rear/person_mask')
+        self.declare_parameter('model_path', 'yolov8n.pt')
+        self.declare_parameter('confidence_threshold', 0.5)
+        self.declare_parameter('max_fps', 5.0)
+        self.declare_parameter('device', '')
 
-        camera_topic        = self.get_parameter('camera_topic').value
-        mask_topic          = self.get_parameter('mask_topic').value
-        model_path          = self.get_parameter('model_path').value
-        self._conf          = self.get_parameter('confidence_threshold').value
-        max_fps             = self.get_parameter('max_fps').value
-        self._device        = self.get_parameter('device').value
-        self._display       = self.get_parameter('display').value
+        camera_topic = self.get_parameter('camera_topic').value
+        mask_topic = self.get_parameter('mask_topic').value
+        model_path = self.get_parameter('model_path').value
+        self._conf = self.get_parameter('confidence_threshold').value
+        max_fps = self.get_parameter('max_fps').value
+        self._device  = self.get_parameter('device').value
 
-        self._min_interval  = 1.0 / max(max_fps, 0.1)
-        self._last_run      = 0.0
+        self._min_interval = 1.0 / max(max_fps, 0.1)
+        self._last_run = 0.0
 
-        # YOLO model
         self.get_logger().info(f'Loading YOLO model from {model_path}')
         self._model = YOLO(model_path)
         self.get_logger().info('YOLO model loaded')
@@ -53,7 +51,9 @@ class DetectPersonNode(Node):
             pass
 
         self._bridge = CvBridge()
-        self._sub = self.create_subscription(Image, camera_topic, self._image_cb, 1)
+        self._latest_frame = None
+        self._sub = self.create_subscription(Image, camera_topic, self._image_cb,
+                                             qos_profile_sensor_data)
         self._pub = self.create_publisher(Image, mask_topic, 1)
 
         self.get_logger().info(
@@ -104,26 +104,15 @@ class DetectPersonNode(Node):
         mask_msg.header = msg.header
         self._pub.publish(mask_msg)
 
-        if self._display:
-            cv2.imshow('DetectPerson', annotated)
-            cv2.waitKey(1)
+        self._latest_frame = annotated
 
-    def destroy_node(self):
-        cv2.destroyAllWindows()
-        super().destroy_node()
 
 
 def main(args=None):
     rclpy.init(args=args)
     node = DetectPersonNode()
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        node.get_logger().info('Keyboard interrupt, shutting down.')
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
-
+    rclpy.spin(node)
+    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

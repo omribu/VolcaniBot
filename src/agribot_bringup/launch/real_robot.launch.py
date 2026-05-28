@@ -12,9 +12,9 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 def launch_robot_state_publisher(context, *args, **kwargs):
     xacro_file = os.path.join(
-        get_package_share_directory("volcanibot_description"),
+        get_package_share_directory("agribot_description"),
         "urdf",
-        "volcanibot.xacro"
+        "zed_robot_agribot.xacro"
     )
     robot_description_xml = xacro.process_file(
         xacro_file,
@@ -52,7 +52,7 @@ def generate_launch_description():
     )
 
     zed_override_real_path = os.path.join(
-    get_package_share_directory("volcanibot_bringup"),
+    get_package_share_directory("agribot_bringup"),
     "config",
     "zed_override_real.yaml"
     )
@@ -68,11 +68,11 @@ def generate_launch_description():
     use_sim        = LaunchConfiguration("use_sim")
     initial_camera = LaunchConfiguration("initial_camera")
 
-    volcanibot_controller_pkg = get_package_share_directory('volcanibot_controller')
+    agribot_controller_pkg = get_package_share_directory('agribot_controller')
 
     controller = IncludeLaunchDescription(
         os.path.join(
-            get_package_share_directory("volcanibot_diff_controller"),
+            get_package_share_directory("agribot_diff_controller"),
             "launch",
             "diffdrive.launch.py"
         )
@@ -80,7 +80,7 @@ def generate_launch_description():
 
     joystick = IncludeLaunchDescription(
         os.path.join(
-            get_package_share_directory("volcanibot_controller"),
+            get_package_share_directory("agribot_controller"),
             "launch",
             "joy_stick_teleop.launch.py"
         ),
@@ -88,16 +88,47 @@ def generate_launch_description():
             "use_sim":      use_sim,
             "use_sim_time": use_sim_time,
             # "joy_teleop_config": os.path.join(
-            #     volcanibot_controller_pkg, "config", "joy_teleop_real.yaml"
+            #     agribot_controller_pkg, "config", "joy_teleop_real.yaml"
             # ),
             # "twist_mux_topics_config": os.path.join(
-            #     volcanibot_controller_pkg, "config", "twist_mux_topics_real.yaml"
+            #     agribot_controller_pkg, "config", "twist_mux_topics_real.yaml"
             # ),
         }.items()
     )
 
 
-    # ---------------- RealSense (rear) ----------------
+    nav_launch = IncludeLaunchDescription(
+        os.path.join(
+            get_package_share_directory("agribot_navigation"),
+            "launch",
+            "real_nav.launch.py"
+        ),
+        launch_arguments={
+            "initial_camera": LaunchConfiguration("initial_camera"),
+            "use_sim_time": "False"
+        }.items()
+    )
+
+
+    # ---------------- ZED ----------------
+    zed_wrapper_node = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("zed_wrapper"),
+                "launch",
+                "zed_camera.launch.py"
+            )
+        ),
+        launch_arguments={
+            "camera_model": "zedx",
+            "publish_tf": "false",
+            "publish_urdf": "false",  # our RSP (OpaqueFunction) handles robot_description
+            "ros_params_override_path": zed_override_real_path,
+        }.items()
+    )
+
+
+    # ---------------- RealSense (right) ----------------
     realsense = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
@@ -107,49 +138,30 @@ def generate_launch_description():
             ])
         ),
         launch_arguments={
-            'camera_name':  'realsense_rear',
+            'camera_name':  'realsense_right',   # topic: /camera/realsense_right/color/image_raw
             'enable_depth': 'true',
             'enable_color': 'true',
             'enable_gyro': 'false',
             'enable_accel': 'false',
             'enable_sync': 'false',
-            'publish_tf': 'true',
-            'align_depth.enable': 'true',
+            'publish_tf': 'true', 
         }.items()
     )
 
-    # Bridges the URDF frame (rear_camera_link) to the RealSense driver's root frame (realsense_rear_link).
-    realsense_rear_tf_bridge = Node(
+    # Bridges URDF frame (camera_right_link) to the RealSense driver's root frame (realsense_right_link).
+    # The driver owns realsense_right_link and its children; the URDF owns camera_right_link.
+    # Setting base_frame_id on the driver would cause a broadcaster conflict, so we use a static TF instead.
+    realsense_right_tf_bridge = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        name='realsense_rear_tf_bridge',
-        arguments=['0', '0', '0', '0', '0', '0', 'rear_camera_link', 'realsense_rear_link'],
+        name='realsense_right_tf_bridge',
+        arguments=['0', '0', '0', '0', '0', '0', 'camera_right_link', 'realsense_right_link'],
         output='screen',
     )
 
-    Follow_person_launch = IncludeLaunchDescription(
-        os.path.join(
-            get_package_share_directory("yolo_bringup"),
-            "launch",
-            "yolo.launch.py"
-        ),
-        launch_arguments={
-            'use_3d': 'True',
-            'use_tracking': 'True',
-            'model': '/home/volcani/workspaces/VolcaniBot/models/yolo11m.engine',
-            'tracker': 'botsort.yaml',
-            'device': 'cuda:0',
-            'image_reliability': '2',
-            'half': 'True',
-            'imgsz_height': '480',
-            'imgsz_width': '640',
-            'input_image_topic': '/camera/realsense_rear/color/image_raw',
-            'input_depth_topic': '/camera/realsense_rear/aligned_depth_to_color/image_raw',
-            'input_depth_info_topic': '/camera/realsense_rear/aligned_depth_to_color/camera_info',
-            'depth_image_units_divisor': '1000',
-            'target_frame': 'base_link',
-        }.items()
-    )
+
+
+
 
 
     # Joint state publisher — publishes zero values for wheel joints when controller is off.
@@ -167,7 +179,7 @@ def generate_launch_description():
         executable="rviz2",
         name="rviz2",
         output="screen",
-        arguments=["-d", os.path.join(get_package_share_directory("volcanibot_description"), "rviz", "real_robot.rviz")]
+        arguments=["-d", os.path.join(get_package_share_directory("agribot_description"), "rviz", "real_robot.rviz")]
     )
 
 
@@ -179,8 +191,8 @@ def generate_launch_description():
         joint_state_pub,
         # controller,  # uncomment when Roboteq motor driver is connected at /dev/ttyACM0
         joystick,
+        zed_wrapper_node,
         realsense,
-        realsense_rear_tf_bridge,
-        Follow_person_launch,
+        realsense_right_tf_bridge,
         rviz_node,
     ])

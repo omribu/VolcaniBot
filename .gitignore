@@ -2,3 +2,9 @@
 /install
 /log
 ./vscode
+__pycache__/
+*.pyc
+.vscode/
+
+# TensorRT engines are built per-machine on first run, never commit them
+*.engine
