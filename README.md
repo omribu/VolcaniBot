@@ -1,6 +1,6 @@
 # VolcaniBot — Autonomous Agricultural Robot
 
-ROS 2 Humble · NVIDIA Jetson · Intel RealSense D435I
+ROS 2 · NVIDIA Jetson · Intel RealSense D435I
 
 VolcaniBot is a differential-drive agricultural robot designed for field operations. It supports joystick teleoperation, real-time person detection and following using a depth camera and YOLO, and is being extended with GPS-based autonomous navigation.
 
