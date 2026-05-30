@@ -64,7 +64,7 @@ install(
   DESTINATION share/volcanibot_diff_controller
 )
 install(
-  PROGRAMS scripts/cmd_vel_converter.py
+  PROGRAMS scripts/cmd_vel_converter.py scripts/yolo_joy_toggle.py
   DESTINATION lib/volcanibot_diff_controller
 )
 install(TARGETS volcanibot_diff_controller

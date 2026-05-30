@@ -26,13 +26,12 @@ def generate_launch_description():
     # Declare arguments
     declared_arguments = []
 
-    # Get URDF via xacro — use full agribot model with real hardware ros2_control
     robot_description_content = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
             " ",
             PathJoinSubstitution(
-                [FindPackageShare("volcanibot_description"), "urdf", "zed_robot_agribot.xacro"]
+                [FindPackageShare("volcanibot_description"), "urdf", "volcanibot.xacro"]
             ),
             " use_sim:=false",
         ]

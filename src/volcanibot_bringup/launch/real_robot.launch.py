@@ -34,7 +34,6 @@ def launch_robot_state_publisher(context, *args, **kwargs):
 
 def generate_launch_description():
 
-    # Arguments
     use_sim_time_arg = DeclareLaunchArgument(
         "use_sim_time",
         default_value="false",
@@ -45,59 +44,24 @@ def generate_launch_description():
         default_value="false",
         description="Use simulation"
     )
-    initial_camera_arg = DeclareLaunchArgument(
-        "initial_camera",
-        default_value="right_camera",
-        description="Initial camera to use (right_camera or left_camera)"
-    )
 
-    zed_override_real_path = os.path.join(
-    get_package_share_directory("volcanibot_bringup"),
-    "config",
-    "zed_override_real.yaml"
-    )
+    use_sim_time = LaunchConfiguration("use_sim_time")
+    use_sim = LaunchConfiguration("use_sim")
 
-    # Gains for Line following controller
-    kp_heading_arg = DeclareLaunchArgument("kp_heading", default_value="0.7")
-    kd_heading_arg = DeclareLaunchArgument("kd_heading", default_value="0.8")
-    ki_heading_arg = DeclareLaunchArgument("ki_heading", default_value="0.0")
-
-
-
-    use_sim_time   = LaunchConfiguration("use_sim_time")
-    use_sim        = LaunchConfiguration("use_sim")
-    initial_camera = LaunchConfiguration("initial_camera")
-
-    volcanibot_controller_pkg = get_package_share_directory('volcanibot_controller')
-
-    controller = IncludeLaunchDescription(
-        os.path.join(
-            get_package_share_directory("volcanibot_diff_controller"),
-            "launch",
-            "diffdrive.launch.py"
-        )
-    )
-
+    # Joystick teleop (joy_node + joy_teleop + twist_mux) 
     joystick = IncludeLaunchDescription(
         os.path.join(
-            get_package_share_directory("volcanibot_controller"),
+            get_package_share_directory("volcanibot_diff_controller"),
             "launch",
             "joy_stick_teleop.launch.py"
         ),
         launch_arguments={
-            "use_sim":      use_sim,
+            "use_sim": use_sim,
             "use_sim_time": use_sim_time,
-            # "joy_teleop_config": os.path.join(
-            #     volcanibot_controller_pkg, "config", "joy_teleop_real.yaml"
-            # ),
-            # "twist_mux_topics_config": os.path.join(
-            #     volcanibot_controller_pkg, "config", "twist_mux_topics_real.yaml"
-            # ),
         }.items()
     )
 
-
-    # ---------------- RealSense (rear) ----------------
+    # RealSense D435 (rear) 
     realsense = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
@@ -107,7 +71,7 @@ def generate_launch_description():
             ])
         ),
         launch_arguments={
-            'camera_name':  'realsense_rear',
+            'camera_name': 'realsense_rear',
             'enable_depth': 'true',
             'enable_color': 'true',
             'enable_gyro': 'false',
@@ -118,7 +82,6 @@ def generate_launch_description():
         }.items()
     )
 
-    # Bridges the URDF frame (rear_camera_link) to the RealSense driver's root frame (realsense_rear_link).
     realsense_rear_tf_bridge = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
@@ -127,7 +90,8 @@ def generate_launch_description():
         output='screen',
     )
 
-    Follow_person_launch = IncludeLaunchDescription(
+    # YOLO detection + tracking + 3D 
+    yolo_launch = IncludeLaunchDescription(
         os.path.join(
             get_package_share_directory("yolo_bringup"),
             "launch",
@@ -151,9 +115,17 @@ def generate_launch_description():
         }.items()
     )
 
+    # Follow-person node (button toggle + closest-person tracking)
+    follow_person_launch = IncludeLaunchDescription(
+        os.path.join(
+            get_package_share_directory("volcanibot_follow_person"),
+            "launch",
+            "follow_person.launch.py"
+        )
+    )
 
-    # Joint state publisher — publishes zero values for wheel joints when controller is off.
-    # Comment out when uncommenting `controller` above (the joint_state_broadcaster takes over).
+    # Joint state publisher — publishes zero values for wheel joints when
+    # the hardware controller (diffdrive) is not running.
     joint_state_pub = Node(
         package="joint_state_publisher",
         executable="joint_state_publisher",
@@ -161,26 +133,34 @@ def generate_launch_description():
         parameters=[{"use_sim_time": False}],
     )
 
+    controller = IncludeLaunchDescription(
+        os.path.join(
+            get_package_share_directory("volcanibot_diff_controller"),
+            "launch",
+            "diffdrive.launch.py"
+        )
+    )
 
     rviz_node = Node(
         package="rviz2",
         executable="rviz2",
         name="rviz2",
         output="screen",
-        arguments=["-d", os.path.join(get_package_share_directory("volcanibot_description"), "rviz", "real_robot.rviz")]
+        arguments=["-d", os.path.join(
+            get_package_share_directory("volcanibot_description"), "rviz", "real_robot.rviz"
+        )]
     )
-
 
     return LaunchDescription([
         use_sim_time_arg,
         use_sim_arg,
-        initial_camera_arg,
         OpaqueFunction(function=launch_robot_state_publisher),
         joint_state_pub,
         # controller,  # uncomment when Roboteq motor driver is connected at /dev/ttyACM0
         joystick,
         realsense,
         realsense_rear_tf_bridge,
-        Follow_person_launch,
+        yolo_launch,
+        follow_person_launch,
         rviz_node,
     ])

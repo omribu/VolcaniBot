@@ -31,13 +31,12 @@ install(
 
 
 install(DIRECTORY
-  launch config 
+  launch 
   DESTINATION share/${PROJECT_NAME}
 )
 
 install(PROGRAMS
-  ${PROJECT_NAME}/arducam_publisher.py
-  ${PROJECT_NAME}/detect_person.py
+  ${PROJECT_NAME}/person_target.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
