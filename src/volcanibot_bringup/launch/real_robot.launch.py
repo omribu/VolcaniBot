@@ -155,8 +155,8 @@ def generate_launch_description():
         use_sim_time_arg,
         use_sim_arg,
         OpaqueFunction(function=launch_robot_state_publisher),
-        joint_state_pub,
-        # controller,  # uncomment when Roboteq motor driver is connected at /dev/ttyACM0
+        # joint_state_pub,
+        controller,  # uncomment when Roboteq motor driver is connected at /dev/ttyACM0
         joystick,
         realsense,
         realsense_rear_tf_bridge,

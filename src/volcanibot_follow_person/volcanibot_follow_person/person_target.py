@@ -24,16 +24,19 @@ class PersonTargetNode(Node):
         self.declare_parameter("yolo_enable_service", "/yolo/yolo_node/enable")
         self.declare_parameter("lost_timeout", 2.0)
 
-        # ── velocity: linear ──────────────────────────────────────────────────
-        self.declare_parameter("min_distance", 1.35)    # m — start moving
-        self.declare_parameter("max_distance", 2.50)    # m — full speed
-        self.declare_parameter("max_linear_vel", 0.3)   # m/s magnitude (applied as negative)
+        self.declare_parameter("min_distance", 1.5)    
+        self.declare_parameter("max_distance", 2.0)    
+        self.declare_parameter("max_linear_vel", 0.45)   
 
-        # ── velocity: angular ─────────────────────────────────────────────────
-        self.declare_parameter("max_angular_vel", 0.5)  # rad/s cap
-        self.declare_parameter("max_angle_deg", 45.0)   # deg at which angular vel saturates
+        self.declare_parameter("max_angular_vel", 0.4) 
+        self.declare_parameter("ang_kp", 0.4)           
+        self.declare_parameter("ang_ki", 0.0)          
+        self.declare_parameter("ang_kd", 0.2)          
+        self.declare_parameter("ang_i_max", 0.3)       
+        self.declare_parameter("ang_filter_alpha", 0.2) 
+        self.declare_parameter("ang_deadband_deg", 20.0) 
 
-        self.declare_parameter("safety_timeout", 0.5)   # seconds
+        self.declare_parameter("safety_timeout", 0.5)   
 
         self._button = self.get_parameter("toggle_button").get_parameter_value().integer_value
         det_topic = self.get_parameter("detections_topic").get_parameter_value().string_value
@@ -43,7 +46,14 @@ class PersonTargetNode(Node):
         self._max_dist = self.get_parameter("max_distance").get_parameter_value().double_value
         self._max_linear = self.get_parameter("max_linear_vel").get_parameter_value().double_value
         self._max_angular = self.get_parameter("max_angular_vel").get_parameter_value().double_value
-        self._max_angle_rad  = math.radians(self.get_parameter("max_angle_deg").get_parameter_value().double_value)
+        self._ang_kp = self.get_parameter("ang_kp").get_parameter_value().double_value
+        self._ang_ki = self.get_parameter("ang_ki").get_parameter_value().double_value
+        self._ang_kd = self.get_parameter("ang_kd").get_parameter_value().double_value
+        self._ang_i_max = self.get_parameter("ang_i_max").get_parameter_value().double_value
+        self._ang_alpha = self.get_parameter("ang_filter_alpha").get_parameter_value().double_value
+        self._ang_deadband = math.radians(
+            self.get_parameter("ang_deadband_deg").get_parameter_value().double_value
+        )
         self._safety_timeout = self.get_parameter("safety_timeout").get_parameter_value().double_value
 
 
@@ -53,6 +63,11 @@ class PersonTargetNode(Node):
         self._last_seen: float = 0.0
         self._last_pos: Optional[PointStamped] = None
         self._last_pos_time: Optional[float] = None
+
+        self._ang_integral: float = 0.0
+        self._ang_prev_error: float = 0.0
+        self._ang_filtered_error: float = 0.0
+        self._prev_time: Optional[float] = None
 
         self._yolo_client = self.create_client(SetBool, svc_name)
 
@@ -143,18 +158,41 @@ class PersonTargetNode(Node):
         x = self._last_pos.point.x  
         y = self._last_pos.point.y  
 
-        # Linear velocity 
-        dist = abs(x)
+        dist = math.sqrt(x * x + y * y)
         if dist <= self._min_dist:
-            linear_x = 0.0
-        else:
-            t = min(1.0, (dist - self._min_dist) / (self._max_dist - self._min_dist))
-            linear_x = -t * self._max_linear  # negative = drive backward toward person
+            self._cmd_pub.publish(Twist())
+            self._ang_filtered_error = 0.0
+            self._ang_integral       = 0.0
+            self._ang_prev_error     = 0.0
+            self._prev_time          = None
+            return
 
-        # Angular velocity
-        angle_error = math.atan2(y, -x)
-        K_ang = self._max_angular / self._max_angle_rad
-        angular_z = max(-self._max_angular, min(self._max_angular, -K_ang * angle_error))
+        t = min(1.0, (dist - self._min_dist) / (self._max_dist - self._min_dist))
+        linear_x = -t * self._max_linear  # negative = drive backward toward person
+
+        # Angular velocity — EMA-filtered PID with deadband
+        raw_error = math.atan2(y, x)
+        self._ang_filtered_error = (
+            self._ang_alpha * raw_error
+            + (1.0 - self._ang_alpha) * self._ang_filtered_error
+        )
+        angle_error = self._ang_filtered_error
+
+        if abs(angle_error) < self._ang_deadband:
+            angular_z = 0.0
+            self._prev_time = now  # freeze PID state; avoid dt spike on re-entry
+        else:
+            dt = (now - self._prev_time) if self._prev_time is not None else 0.05
+            self._prev_time = now
+
+            self._ang_integral += angle_error * dt
+            self._ang_integral = max(-self._ang_i_max, min(self._ang_i_max, self._ang_integral))
+
+            d_error = (angle_error - self._ang_prev_error) / dt if dt > 0 else 0.0
+            self._ang_prev_error = angle_error
+
+            raw = self._ang_kp * angle_error + self._ang_ki * self._ang_integral + self._ang_kd * d_error
+            angular_z = max(-self._max_angular, min(self._max_angular, raw))
 
         cmd = Twist()
         cmd.linear.x  = linear_x
@@ -168,6 +206,11 @@ class PersonTargetNode(Node):
 
     def _set_state(self, state: str):
         self._state = state
+        if state != self.TRACKING:
+            self._ang_integral       = 0.0
+            self._ang_prev_error     = 0.0
+            self._ang_filtered_error = 0.0
+            self._prev_time          = None
         self.get_logger().info(f"State → {state}")
 
     def _publish_state(self):
